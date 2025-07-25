@@ -5,8 +5,8 @@ interface User {
   id: string;
   name: string;
   email: string;
-  tier: 'freemium' | 'premium';
-  uploadsRemaining: number;
+  tier?: 'freemium' | 'premium';
+  uploadsRemaining?: number;
 }
 
 interface AuthContextType {
@@ -35,42 +35,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simple validation - in real app this would be handled by backend
-    if (email && password.length >= 6) {
-      setUser({
-        id: '1',
-        name: email.split('@')[0],
-        email,
-        tier: 'freemium',
-        uploadsRemaining: 3
+    try {
+      const res = await fetch('http://localhost:4000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email, password }),
       });
+      if (!res.ok) return false;
+      const data = await res.json();
+      localStorage.setItem('token', data.token);
+      setUser({ id: data.id.toString(), name: data.username, email });
       return true;
+    } catch (err) {
+      return false;
     }
-    return false;
   };
 
   const signup = async (name: string, email: string, password: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (name && email && password.length >= 6) {
-      setUser({
-        id: '1',
-        name,
-        email,
-        tier: 'freemium',
-        uploadsRemaining: 3
+    try {
+      const res = await fetch('http://localhost:4000/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email, password }),
       });
+      if (!res.ok) return false;
+      const data = await res.json();
+      // Optionally, auto-login after signup
+      localStorage.setItem('token', data.token || '');
+      setUser({ id: data.id.toString(), name, email });
       return true;
+    } catch (err) {
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('token');
   };
 
   const value = {
@@ -78,7 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     signup,
     logout,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
 
   return (
